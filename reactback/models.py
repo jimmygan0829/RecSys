@@ -27,7 +27,7 @@ class Movies(models.Model):
     runtime = models.IntegerField()
     year = models.IntegerField()
     genre = models.CharField(max_length=125, blank=True, null=True)
-
+    score = models.FloatField(null = True)
     class Meta:
         managed = False
         db_table = 'movies'
@@ -53,6 +53,17 @@ class Tags(models.Model):
     class Meta:
         managed = False
         db_table = 'tags'
+
+class Comments(models.Model):
+    commentid = models.PositiveIntegerField(primary_key = True)
+    comment = models.CharField(max_length=1000)
+    userid = models.ForeignKey(User, models.DO_NOTHING, db_column='userId')  # Field name made lowercase.
+    movieid = models.ForeignKey(Movies, models.DO_NOTHING, db_column='movieid')
+    tstamp = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'comments'
 
 # class Crit(models.Model):
 #     cri_id = models.AutoField(primary_key=True)

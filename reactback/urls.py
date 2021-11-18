@@ -17,10 +17,11 @@ from django.contrib import admin
 from django.urls import path,include
 from rest_framework import routers
 #from .views import CritViewSet,EffoViewSet,EffoUserSet,DDateViewSet,CritDoSet,AdminViewSet
-from .views import MovieSet
+from .views import MovieSet,MovieScoreSet,CommentsHandler
 router = routers.DefaultRouter()
-
+router.register(r'comment',CommentsHandler,basename = 'indiv')
 router.register(r'movie', MovieSet,basename='ind')
+router.register(r'score', MovieScoreSet,basename='inds')
 # router.register(r'viewcrit', CritViewSet)
 # router.register(r'adminview', AdminViewSet)
 # router.register(r'docrit',CritDoSet)
