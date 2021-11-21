@@ -1,6 +1,6 @@
 from rest_framework import viewsets,status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAdminUser,IsAuthenticated
+from rest_framework.permissions import IsAdminUser,IsAuthenticated,AllowAny
 from .serializers import MoviesSerializer,RatingsSerializer,TagsSerializer,UserSer,CommentsSerializer
 from .models import Movies,Tags,Ratings, User,Comments
 import datetime,time
@@ -141,16 +141,16 @@ def getTrendingNow(user = None):
 	packet = {}
 	packet['recommendation'] = {}
 	l = list(Movies.objects.filter().values('movieid'))
-	randomlist = random.sample(range(0, len(l)), 20)
+	randomlist = random.sample(range(0, len(l)), 3)
 	for idx in randomlist:
 		mid = l[idx]['movieid']
 		url = f'https://inf551-4b646-default-rtdb.firebaseio.com/content/{mid}.json'
 		response = requests.get(url)
 		if response.status_code == 200:
 			content = response.json()
-			n = random.randint(1,100)
+			n = Movies.objects.get(movieid = mid).score#random.randint(1,100)
 			imgUrl = f'https://filmimg.s3.us-west-2.amazonaws.com/{mid}.jpg'
-			packet['recommendation'][str(mid)] = {'title':content['title'],'avg_rate':f'{n}%','img_link':imgUrl}
+			packet['recommendation'][str(mid)] = {'title':content['title'],'avg_rate':score100(n),'img_link':imgUrl}
 	return packet
 
 '''
@@ -161,16 +161,16 @@ def getFamFav(user = None):
 	packet = {}
 	packet['recommendation'] = {}
 	l = list(Movies.objects.filter().values('movieid'))
-	randomlist = random.sample(range(0, len(l)), 20)
+	randomlist = random.sample(range(0, len(l)), 3)
 	for idx in randomlist:
 		mid = l[idx]['movieid']
 		url = f'https://inf551-4b646-default-rtdb.firebaseio.com/content/{mid}.json'
 		response = requests.get(url)
 		if response.status_code == 200:
 			content = response.json()
-			n = random.randint(1,100)
+			n = Movies.objects.get(movieid = mid).score#random.randint(1,100)
 			imgUrl = f'https://filmimg.s3.us-west-2.amazonaws.com/{mid}.jpg'
-			packet['recommendation'][str(mid)] = {'title':content['title'],'avg_rate':f'{n}%','img_link':imgUrl}
+			packet['recommendation'][str(mid)] = {'title':content['title'],'avg_rate':score100(n),'img_link':imgUrl}
 	return packet
 
 class CommentsHandler(viewsets.ModelViewSet):
@@ -245,6 +245,63 @@ class MovieScoreSet(viewsets.ReadOnlyModelViewSet):
 			#for item in ct_review:
 			print('what the hell::::::::: COUNT REVIEWS ',row)
 			return JsonResponse({'score':target_movie.score,'status':'valid'})
+
+class HomeSet(viewsets.ReadOnlyModelViewSet):
+	# queryset = Effo.objects.all()
+	serializer_class = MoviesSerializer
+	permission_classes = (AllowAny,)
+
+	def get_queryset(self):
+		#queryset = Movies.objects.all()
+		#movieid = self.request.query_params.get('id', None)
+		#advPrint(f"{type(request.user)}requested user is ::::",request.user)
+		# if movieid is not None:
+		# 	queryset = Movies.objects.filter(movieid=int(movieid))
+		# 	return  queryset
+		#return JsonResponse(getTrendingNow())
+		return Movies.objects.filter(movieid=int(2))
+
+
+	
+
+	@action(detail= False, methods = ['get'],url_path='home')
+	def HomePage(self,request,pk=None):
+		advPrint(f"{type(request.user)}requested user is ::::",request.user)
+		from random import randrange
+		colduser = randrange(10)%2
+		ret_package = {}
+		# will also add another condition to check if user has rating record or recommendations
+		if request.user.is_anonymous or colduser == 1:
+			
+			trendingNow = getTrendingNow()
+			recentRelease = getFamFav()
+			topAnime = trendingNow
+			topCome = recentRelease
+			topDrama = recentRelease
+			topRandom = trendingNow
+			ret_package['trendingNow']=trendingNow
+			ret_package['recentRelease']=recentRelease
+			ret_package['topAnime']=topAnime
+			ret_package['topCome']=topCome
+			ret_package['topDrama']=topDrama
+			ret_package['Documentary']=topRandom
+			return JsonResponse(ret_package)
+		else:
+			watchagain = getTrendingNow()
+			recom = getFamFav()
+			topAnime = watchagain
+			topCome = recom
+			topDrama = recom
+			topRandom = watchagain
+			ret_package['watchagain']=watchagain
+			ret_package['FamFav']=recom
+			ret_package['topAnime']=topAnime
+			ret_package['topCome']=topCome
+			ret_package['topDrama']=topDrama
+			ret_package['War']=topRandom
+			return JsonResponse(ret_package)
+		
+
 
 class MovieSet(viewsets.ReadOnlyModelViewSet):
 	# queryset = Effo.objects.all()
