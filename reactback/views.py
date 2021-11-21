@@ -273,13 +273,13 @@ class HomeSet(viewsets.ReadOnlyModelViewSet):
 		# will also add another condition to check if user has rating record or recommendations
 		if request.user.is_anonymous or colduser == 1:
 			
-			trendingNow = getTrendingNow()
+			criticallyAcclaimed = getTrendingNow()
 			recentRelease = getFamFav()
-			topAnime = trendingNow
+			topAnime = criticallyAcclaimed
 			topCome = recentRelease
 			topDrama = recentRelease
-			topRandom = trendingNow
-			ret_package['trendingNow']=trendingNow
+			topRandom = criticallyAcclaimed
+			ret_package['criticallyAcclaimed']=criticallyAcclaimed
 			ret_package['recentRelease']=recentRelease
 			ret_package['topAnime']=topAnime
 			ret_package['topCome']=topCome
