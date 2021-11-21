@@ -28,6 +28,8 @@ class Movies(models.Model):
     year = models.IntegerField()
     genre = models.CharField(max_length=125, blank=True, null=True)
     score = models.FloatField(null = True)
+    storyline = models.CharField(max_length=5000, blank=True, null=True)
+    title = models.CharField(max_length=500, blank=True, null=True)
     class Meta:
         managed = False
         db_table = 'movies'

@@ -121,13 +121,16 @@ def getRec(curr_id):
 	randomlist = random.sample(range(0, len(l)), 10)
 	for idx in randomlist:
 		mid = l[idx]['movieid']
-		url = f'https://inf551-4b646-default-rtdb.firebaseio.com/content/{mid}.json'
-		response = requests.get(url)
-		if response.status_code == 200:
-			content = response.json()
-			n = Movies.objects.get(movieid = mid).score#random.randint(1,100)
-			imgUrl = f'https://filmimg.s3.us-west-2.amazonaws.com/{mid}.jpg'
-			packet['recommendation'][str(mid)] = {'title':content['title'],'avg_rate':score100(n),'img_link':imgUrl}
+		# url = f'https://inf551-4b646-default-rtdb.firebaseio.com/content/{mid}.json'
+		# response = requests.get(url)
+		# if response.status_code == 200:
+		# 	content = response.json()
+		content={}
+		content['title'] = Movies.objects.get(movieid = mid).title
+		content['storyline'] = Movies.objects.get(movieid = mid).storyline
+		n = Movies.objects.get(movieid = mid).score#random.randint(1,100)
+		imgUrl = f'https://filmimg.s3.us-west-2.amazonaws.com/{mid}.jpg'
+		packet['recommendation'][str(mid)] = {'title':content['title'],'avg_rate':score100(n),'img_link':imgUrl}
 	return packet
 
 	# print('----->',l[4]['movieid'],' ',len(l))#.movieid,' ',l[4].year)
@@ -144,13 +147,16 @@ def getTrendingNow(user = None):
 	randomlist = random.sample(range(0, len(l)), 3)
 	for idx in randomlist:
 		mid = l[idx]['movieid']
-		url = f'https://inf551-4b646-default-rtdb.firebaseio.com/content/{mid}.json'
-		response = requests.get(url)
-		if response.status_code == 200:
-			content = response.json()
-			n = Movies.objects.get(movieid = mid).score#random.randint(1,100)
-			imgUrl = f'https://filmimg.s3.us-west-2.amazonaws.com/{mid}.jpg'
-			packet['recommendation'][str(mid)] = {'title':content['title'],'avg_rate':score100(n),'img_link':imgUrl}
+		# url = f'https://inf551-4b646-default-rtdb.firebaseio.com/content/{mid}.json'
+		# response = requests.get(url)
+		# if response.status_code == 200:
+		# 	content = response.json()
+		content={}
+		content['title'] = Movies.objects.get(movieid = mid).title
+		content['storyline'] = Movies.objects.get(movieid = mid).storyline
+		n = Movies.objects.get(movieid = mid).score#random.randint(1,100)
+		imgUrl = f'https://filmimg.s3.us-west-2.amazonaws.com/{mid}.jpg'
+		packet['recommendation'][str(mid)] = {'title':content['title'],'avg_rate':score100(n),'img_link':imgUrl}
 	return packet
 
 '''
@@ -164,13 +170,16 @@ def getFamFav(user = None):
 	randomlist = random.sample(range(0, len(l)), 3)
 	for idx in randomlist:
 		mid = l[idx]['movieid']
-		url = f'https://inf551-4b646-default-rtdb.firebaseio.com/content/{mid}.json'
-		response = requests.get(url)
-		if response.status_code == 200:
-			content = response.json()
-			n = Movies.objects.get(movieid = mid).score#random.randint(1,100)
-			imgUrl = f'https://filmimg.s3.us-west-2.amazonaws.com/{mid}.jpg'
-			packet['recommendation'][str(mid)] = {'title':content['title'],'avg_rate':score100(n),'img_link':imgUrl}
+		# url = f'https://inf551-4b646-default-rtdb.firebaseio.com/content/{mid}.json'
+		# response = requests.get(url)
+		# if response.status_code == 200:
+		# 	content = response.json()
+		content={}
+		content['title'] = Movies.objects.get(movieid = mid).title
+		content['storyline'] = Movies.objects.get(movieid = mid).storyline
+		n = Movies.objects.get(movieid = mid).score#random.randint(1,100)
+		imgUrl = f'https://filmimg.s3.us-west-2.amazonaws.com/{mid}.jpg'
+		packet['recommendation'][str(mid)] = {'title':content['title'],'avg_rate':score100(n),'img_link':imgUrl}
 	return packet
 
 class CommentsHandler(viewsets.ModelViewSet):

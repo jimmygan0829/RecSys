@@ -5,7 +5,7 @@ from .models import Movies,Tags,Ratings,User,Comments
 class MoviesSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Movies
-        fields = ('movieid','runtime','year','genre','score')
+        fields = ('movieid','runtime','year','genre','score','storyline','title')
 
 
 class RatingsSerializer(serializers.HyperlinkedModelSerializer):
