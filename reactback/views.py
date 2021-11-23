@@ -37,6 +37,90 @@ def retrieveReviewCount(curr_id):
 	row = cursor.fetchone()
 	return row[0]
 
+def retrieveUserHistory(uid):
+	cursor = connection.cursor()
+	cursor.execute(f"""SELECT COUNT(*) FROM ratings WHERE userId = {uid}""")
+	row = cursor.fetchone()
+	if row[0] == 0:
+		return False
+	return True
+
+
+def watchagain(uid):
+	cursor = connection.cursor()
+	cursor.execute(f"""
+		WITH tb1 AS(
+SELECT movieid,rating FROM ratings WHERE userId = {uid}
+ORDER BY rating DESC,tstamp LIMIT 10
+)
+SELECT movies.movieid,movies.title,movies.score 
+FROM movies JOIN tb1 ON movies.movieid = tb1.movieid;""")
+	rows = cursor.fetchall()
+	rec = {"recommendation":{}}
+	for eachObj in rows:
+		imgUrl = f'https://filmimg.s3.us-west-2.amazonaws.com/{eachObj[0]}.jpg'
+		rec["recommendation"][f"{eachObj[0]}"] = {"title":eachObj[1],"avg_rate":score100(eachObj[2]),"img_link":imgUrl}
+	return rec
+
+
+
+def recentRelease():
+	cursor = connection.cursor()
+	cursor.execute(f"""
+		WITH tb1 AS(
+SELECT movieid,COUNT(*) AS cnt from ratings 
+GROUP BY movieid HAVING cnt >=50)
+SELECT movies.movieid,movies.title,movies.score,tb1.cnt 
+FROM tb1 JOIN movies ON tb1.movieid = movies.movieid
+ORDER BY movies.year DESC,tb1.cnt DESC LIMIT 20;""")
+	rows = cursor.fetchall()
+	rec = {"recommendation":{}}
+	for eachObj in rows:
+		imgUrl = f'https://filmimg.s3.us-west-2.amazonaws.com/{eachObj[0]}.jpg'
+		rec["recommendation"][f"{eachObj[0]}"] = {"title":eachObj[1],"avg_rate":score100(eachObj[2]),"img_link":imgUrl}
+	return rec
+
+
+def criticalAcclaim():
+	cursor = connection.cursor()
+	cursor.execute(f"""
+		WITH tb1 AS(
+SELECT movieid,COUNT(*) AS cnt from ratings 
+GROUP BY movieid HAVING cnt >=50)
+SELECT movies.movieid,movies.title,movies.score,tb1.cnt 
+FROM tb1 JOIN movies ON tb1.movieid = movies.movieid
+ORDER BY movies.score DESC,tb1.cnt DESC LIMIT 20;""")
+	rows = cursor.fetchall()
+	rec = {"recommendation":{}}
+	for eachObj in rows:
+		imgUrl = f'https://filmimg.s3.us-west-2.amazonaws.com/{eachObj[0]}.jpg'
+		rec["recommendation"][f"{eachObj[0]}"] = {"title":eachObj[1],"avg_rate":score100(eachObj[2]),"img_link":imgUrl}
+	return rec
+
+
+def topinGenre(inpGenre):
+	cursor = connection.cursor()
+	cursor.execute(f"""
+		WITH tb1 AS(
+		SELECT movieid,COUNT(*) AS cnt from ratings GROUP BY movieid
+		HAVING cnt >=50
+			),
+ 		tb2 AS(
+		SELECT * from movies WHERE genre LIKE '%{inpGenre}%'
+			)
+		SELECT tb2.movieid,tb2.title,tb2.score,tb1.cnt 
+			FROM tb1 JOIN tb2 ON tb1.movieid = tb2.movieid
+			ORDER BY tb2.score DESC,tb1.cnt DESC LIMIT 20;""")
+	rows = cursor.fetchall()
+	rec = {"recommendation":{}}
+	for eachObj in rows:
+		imgUrl = f'https://filmimg.s3.us-west-2.amazonaws.com/{eachObj[0]}.jpg'
+		rec["recommendation"][f"{eachObj[0]}"] = {"title":eachObj[1],"avg_rate":score100(eachObj[2]),"img_link":imgUrl}
+	return rec
+
+
+
+
 def createOrUpdateComments(userid,movieid,comment):
 	cursor = connection.cursor()
 	try:
@@ -277,38 +361,32 @@ class HomeSet(viewsets.ReadOnlyModelViewSet):
 	def HomePage(self,request,pk=None):
 		advPrint(f"{type(request.user)}requested user is ::::",request.user)
 		from random import randrange
-		colduser = randrange(10)%2
+		#colduser = retrieveUserHistory()#randrange(10)%2
 		ret_package = {}
 		# will also add another condition to check if user has rating record or recommendations
-		if request.user.is_anonymous or colduser == 1:
-			
-			criticallyAcclaimed = getTrendingNow()
-			recentRelease = getFamFav()
-			topAnime = criticallyAcclaimed
-			topCome = recentRelease
-			topDrama = recentRelease
-			topRandom = criticallyAcclaimed
-			ret_package['criticallyAcclaimed']=criticallyAcclaimed
-			ret_package['recentRelease']=recentRelease
-			ret_package['topAnime']=topAnime
-			ret_package['topCome']=topCome
-			ret_package['topDrama']=topDrama
-			ret_package['Documentary']=topRandom
-			return JsonResponse(ret_package)
-		else:
-			watchagain = getTrendingNow()
-			recom = getFamFav()
-			topAnime = watchagain
-			topCome = recom
-			topDrama = recom
-			topRandom = watchagain
-			ret_package['watchagain']=watchagain
-			ret_package['FamFav']=recom
-			ret_package['topAnime']=topAnime
-			ret_package['topCome']=topCome
-			ret_package['topDrama']=topDrama
-			ret_package['War']=topRandom
-			return JsonResponse(ret_package)
+		all_genre = ['Western', 'Film-Noir', 'Action', 'Fantasy', 
+		'Documentary', 'IMAX', 'Horror', 'War', 'Mystery', 'Thriller', 'Crime',
+		'Romance', 'Adventure', 'Musical', 'Sci-Fi', '(no genres listed)', 'Children']
+		choice = random.choice(all_genre)
+
+		if request.user.is_anonymous == False:
+			if retrieveUserHistory(request.user.id) == True:
+				recom = getFamFav()
+				ret_package['watchagain']=watchagain(request.user.id)
+				ret_package['FamFav']=recom
+				ret_package['topAnime']=topinGenre('Animation')
+				ret_package['topCome']=topinGenre('Comedy')
+				ret_package['topDrama']=topinGenre('Drama')
+				ret_package[choice]=topinGenre(choice)
+				return JsonResponse(ret_package)
+
+		ret_package['criticallyAcclaimed']=criticalAcclaim()
+		ret_package['recentRelease']=recentRelease()
+		ret_package['topAnime']=topinGenre('Animation')
+		ret_package['topCome']=topinGenre('Comedy')
+		ret_package['topDrama']=topinGenre('Drama')
+		ret_package[choice]=topinGenre(choice)
+		return JsonResponse(ret_package)
 		
 
 
