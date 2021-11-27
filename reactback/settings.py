@@ -86,7 +86,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'movieRec',
         'USER':'root',
-        'PASSWORD':'814582160Jy',
+        'PASSWORD':'yyl88325000',
         'HOST':'localhost',
         'PORT': '3306'
     }
@@ -160,4 +160,5 @@ CORS_ORIGIN_WHITELIST = [
     "http://localhost:3000",
     "https://master.dkocvp3kj7xqa.amplifyapp.com",
     "https://demo.dakafacai.com",
+    "http://localhost:8080"
 ]
