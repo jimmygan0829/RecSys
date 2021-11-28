@@ -103,14 +103,14 @@ def topinGenre(inpGenre):
 	cursor.execute(f"""
 		WITH tb1 AS(
 		SELECT movieid,COUNT(*) AS cnt from ratings GROUP BY movieid
-		HAVING cnt >=50
+		
 			),
  		tb2 AS(
 		SELECT * from movies WHERE genre LIKE '%{inpGenre}%'
 			)
 		SELECT tb2.movieid,tb2.title,tb2.score,tb1.cnt 
 			FROM tb1 JOIN tb2 ON tb1.movieid = tb2.movieid
-			ORDER BY tb2.score DESC,tb1.cnt DESC LIMIT 20;""")
+			ORDER BY tb1.cnt DESC,tb2.score DESC LIMIT 20;""")
 	rows = cursor.fetchall()
 	rec = {"recommendation":{}}
 	for eachObj in rows:
@@ -372,19 +372,19 @@ class HomeSet(viewsets.ReadOnlyModelViewSet):
 		if request.user.is_anonymous == False:
 			if retrieveUserHistory(request.user.id) == True:
 				recom = getFamFav()
-				ret_package['watchagain']=watchagain(request.user.id)
-				ret_package['FamFav']=recom
-				ret_package['topAnime']=topinGenre('Animation')
-				ret_package['topCome']=topinGenre('Comedy')
-				ret_package['topDrama']=topinGenre('Drama')
-				ret_package[choice]=topinGenre(choice)
+				ret_package['Watch Again']=watchagain(request.user.id)
+				ret_package['Familiar Favorite']=recom
+				ret_package['Top Anime']=topinGenre('Animation')
+				ret_package['Top Comedy']=topinGenre('Comedy')
+				ret_package['Top Drama']=topinGenre('Drama')
+				ret_package[f'Top {choice}']=topinGenre(choice)
 				return JsonResponse(ret_package)
 
-		ret_package['criticallyAcclaimed']=criticalAcclaim()
-		ret_package['recentRelease']=recentRelease()
-		ret_package['topAnime']=topinGenre('Animation')
-		ret_package['topCome']=topinGenre('Comedy')
-		ret_package['topDrama']=topinGenre('Drama')
+		ret_package['Critically Acclaimed']=criticalAcclaim()
+		ret_package['Recent Release']=recentRelease()
+		ret_package['Top Anime']=topinGenre('Animation')
+		ret_package['Top Comedy']=topinGenre('Comedy')
+		ret_package[f'Top {choice}']=topinGenre('Drama')
 		ret_package[choice]=topinGenre(choice)
 		return JsonResponse(ret_package)
 		

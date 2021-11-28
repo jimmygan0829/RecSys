@@ -160,4 +160,5 @@ CORS_ORIGIN_WHITELIST = [
     "http://localhost:3000",
     "https://master.dkocvp3kj7xqa.amplifyapp.com",
     "https://demo.dakafacai.com",
+    "http://localhost:8080",
 ]
