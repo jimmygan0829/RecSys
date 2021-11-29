@@ -37,6 +37,17 @@ def retrieveReviewCount(curr_id):
 	row = cursor.fetchone()
 	return row[0]
 
+def userCold(curr_id):
+	cursor = connection.cursor()
+	cursor.execute(f"""SELECT COUNT(*) FROM ratings WHERE userId = {curr_id}""")
+	row = cursor.fetchone()
+	if row[0]>=10:
+		return False
+	else:
+		return True
+
+
+
 def retrieveUserHistory(uid):
 	cursor = connection.cursor()
 	cursor.execute(f"""SELECT COUNT(*) FROM ratings WHERE userId = {uid}""")
@@ -98,9 +109,10 @@ ORDER BY movies.score DESC,tb1.cnt DESC LIMIT 20;""")
 	return rec
 
 
-def topinGenre(inpGenre):
+def topinGenre(inpGenre,uid= None):
 	cursor = connection.cursor()
-	cursor.execute(f"""
+	if uid == None:
+		cursor.execute(f"""
 		WITH tb1 AS(
 		SELECT movieid,COUNT(*) AS cnt from ratings GROUP BY movieid
 		
@@ -111,6 +123,23 @@ def topinGenre(inpGenre):
 		SELECT tb2.movieid,tb2.title,tb2.score,tb1.cnt 
 			FROM tb1 JOIN tb2 ON tb1.movieid = tb2.movieid
 			ORDER BY tb1.cnt DESC,tb2.score DESC LIMIT 20;""")
+	else:
+		cursor.execute(f"""
+		WITH tb1 AS(
+		SELECT movieid,COUNT(*) AS cnt from ratings GROUP BY movieid
+		
+			),
+ 		tb2 AS(
+		SELECT * from movies WHERE genre LIKE '%{inpGenre}%'
+			),
+		tb3 AS(
+		SELECT movieid FROM ratings WHERE userId = {uid}
+		)
+		SELECT tb2.movieid,tb2.title,tb2.score,tb1.cnt 
+			FROM tb1 JOIN tb2 ON tb1.movieid = tb2.movieid
+			WHERE tb2.movieid NOT IN (SELECT * FROM tb3)
+			ORDER BY tb1.cnt DESC,tb2.score DESC LIMIT 20;""")
+
 	rows = cursor.fetchall()
 	rec = {"recommendation":{}}
 	for eachObj in rows:
@@ -118,6 +147,11 @@ def topinGenre(inpGenre):
 		rec["recommendation"][f"{eachObj[0]}"] = {"title":eachObj[1],"avg_rate":score100(eachObj[2]),"img_link":imgUrl}
 	return rec
 
+def getUserFullHistory(uid):
+	cursor = connection.cursor()
+	cursor.execute(f"""SELECT movieid FROM ratings WHERE userId ={uid} ORDER BY rating DESC;""")
+	rows = cursor.fetchall()
+	return [eachObj[0] for eachObj in rows]
 
 
 
@@ -190,9 +224,23 @@ def score100(sc):
 	else:
 		return "None"
 
-def getRec(curr_id):
+
+def reorderL (target,record):
+	tmpDict = {int(item):0 for item in target}
+	record = [int(item) for item in record]
+	leftOver = []
+	for item in record:
+		if item in tmpDict:
+			del tmpDict[item]
+			leftOver.append(item)
+
+	output = list(tmpDict.keys())+leftOver
+	#advPrint("helper reorder:::::",output)
+	return output[:20]
+
+def getRec(curr_id,userid):
 	#testing phase
-	l = list(Movies.objects.filter().values('movieid'))
+	#l = list(Movies.objects.filter().values('movieid'))
 	packet = {}
 	url = f'https://inf551-4b646-default-rtdb.firebaseio.com/content/{curr_id}.json'
 	response = requests.get(url)
@@ -202,9 +250,16 @@ def getRec(curr_id):
 	packet['main']['review_count'] = numU_score
 
 	packet['recommendation'] = {}
-	randomlist = random.sample(range(0, len(l)), 10)
-	for idx in randomlist:
-		mid = l[idx]['movieid']
+	uhist = getUserFullHistory(userid)
+	url2 = f'https://inf551-4b646-default-rtdb.firebaseio.com/pureContent/{curr_id}.json'
+	response2 = requests.get(url2)
+	# advPrint("what is the response????? list????",response2.json())
+	# advPrint("User History::::::",uhist)
+	# advPrint("is the user COLD????",userCold(userid))
+	iterList = reorderL(response2.json(),uhist)
+	#randomlist = random.sample(range(0, len(l)), 10)
+	for mid in iterList:
+		#mid = l[idx]['movieid']
 		# url = f'https://inf551-4b646-default-rtdb.firebaseio.com/content/{mid}.json'
 		# response = requests.get(url)
 		# if response.status_code == 200:
@@ -221,6 +276,7 @@ def getRec(curr_id):
 	# return
 
 '''
+Obsolete Version
 params: user, default None
 return: return global trending if the user is None or cold start, else putout customized rec from one of the method
 '''
@@ -242,18 +298,67 @@ def getTrendingNow(user = None):
 		imgUrl = f'https://filmimg.s3.us-west-2.amazonaws.com/{mid}.jpg'
 		packet['recommendation'][str(mid)] = {'title':content['title'],'avg_rate':score100(n),'img_link':imgUrl}
 	return packet
+def batchSimilar(uhist):
+	iterlist = uhist[:4]
+	lfilter = {}
+	for item in iterlist:
+		response = requests.get(url = f'https://inf551-4b646-default-rtdb.firebaseio.com/pureContent/{item}.json')
+		tmp = reorderL(response.json(),uhist)
+		counter = 0
+		idx = 0
+		while True:
+			if counter == 5:
+				break
+			if tmp[idx] not in lfilter:
+				lfilter[tmp[idx]]=0
+				counter+=1
+			idx+=1
+	return list(lfilter.keys())
+
+
+
 
 '''
 params: user, default None
 return: return global highly praised if None, else customized recommendation method
 '''
-def getFamFav(user = None):
+def getFamFav(uid):
 	packet = {}
 	packet['recommendation'] = {}
-	l = list(Movies.objects.filter().values('movieid'))
-	randomlist = random.sample(range(0, len(l)), 3)
-	for idx in randomlist:
-		mid = l[idx]['movieid']
+	uhist = getUserFullHistory(uid)
+	# since userCold and all the determine statement is real time
+	# while the database is batch update periodically
+	# if userCold(uid)==True:
+	url1 = f'https://inf551-4b646-default-rtdb.firebaseio.com/itembased/{uid}.json'
+
+	response1 = requests.get(url1)
+	if response1.json() is not None:
+		targetItem = response1.json()
+		targetItem = reorderL(targetItem,uhist)
+	url2 = f'https://inf551-4b646-default-rtdb.firebaseio.com/userpro/{uid}.json'
+	response2 = requests.get(url2)
+	if response2.json() is not None:
+		userProItem = response2.json()
+		userProItem = reorderL(userProItem,uhist)
+	if response2.json() is None or response1.json() is None:
+		# update latency thus will go select similar movies based on watch history
+		advPrint("User not updated in Algo yet",[])
+		iterList = batchSimilar(uhist)
+	else:
+		if userCold(uid)==True:
+			advPrint("User review counts smaller than 10",[])
+			iterList = targetItem[:10] + userProItem[:10]
+		else:
+			advPrint("User review counts above threshold now",[])
+			iterList = targetItem[:15] + userProItem[:5]
+
+
+
+
+	# l = list(Movies.objects.filter().values('movieid'))
+	# randomlist = random.sample(range(0, len(l)), 3)
+	for mid in iterList:
+		#mid = l[idx]['movieid']
 		# url = f'https://inf551-4b646-default-rtdb.firebaseio.com/content/{mid}.json'
 		# response = requests.get(url)
 		# if response.status_code == 200:
@@ -371,13 +476,13 @@ class HomeSet(viewsets.ReadOnlyModelViewSet):
 
 		if request.user.is_anonymous == False:
 			if retrieveUserHistory(request.user.id) == True:
-				recom = getFamFav()
+				recom = getFamFav(request.user.id)
 				ret_package['Watch Again']=watchagain(request.user.id)
 				ret_package['Familiar Favorite']=recom
-				ret_package['Top Anime']=topinGenre('Animation')
-				ret_package['Top Comedy']=topinGenre('Comedy')
-				ret_package['Top Drama']=topinGenre('Drama')
-				ret_package[f'Top {choice}']=topinGenre(choice)
+				ret_package['Top Anime']=topinGenre('Animation',request.user.id)
+				ret_package['Top Comedy']=topinGenre('Comedy',request.user.id)
+				ret_package['Top Drama']=topinGenre('Drama',request.user.id)
+				ret_package[f'Top {choice}']=topinGenre(choice,request.user.id)
 				return JsonResponse(ret_package)
 
 		ret_package['Critically Acclaimed']=criticalAcclaim()
@@ -428,7 +533,7 @@ class MovieSet(viewsets.ReadOnlyModelViewSet):
 
 		print(' \n ')
 		start = time.time()
-		ret_packet = getRec(target_movie.movieid)
+		ret_packet = getRec(target_movie.movieid,int(request.user.id))
 		movie_comment_qs = Comments.objects.filter(movieid = target_movie.movieid,userid = int(request.user.id))
 		if movie_comment_qs:
 			movie_comment = list(movie_comment_qs)[0].comment
@@ -451,7 +556,7 @@ class MovieSet(viewsets.ReadOnlyModelViewSet):
 		# 	ret_dict['message'] = 'invalid movie id, id not existed in the Database'
 		# 	ret_dict['status'] = 'invalid'
 		# 	return JsonResponse(ret_dict)
-		advPrint('what are we looking at the return packet here:::::',ret_dict)
+		#advPrint('what are we looking at the return packet here:::::',ret_dict)
 		#advPrint('before returnning, JSONREPONSE', JsonResponse(ret_dict,safe = False))
 		
 		return JsonResponse(ret_dict)
