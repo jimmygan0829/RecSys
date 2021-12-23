@@ -493,7 +493,37 @@ class HomeSet(viewsets.ReadOnlyModelViewSet):
 		ret_package[choice]=topinGenre(choice)
 		return JsonResponse(ret_package)
 		
+class UserDemoSet(viewsets.ReadOnlyModelViewSet):
+	serializer_class = UserSer
+	permission_classes = (AllowAny,)
 
+	def get_queryset(self):
+		userid = self.request.query_params.get('uid',None)
+		if userid is not None:
+			queryset = User.objects.filter(id = int(userid))
+			return queryset
+	
+	@action(detail= False, methods = ['get'],url_path='demoUser')
+	def getUserPw(self, request,pk = None):
+		params = request.query_params
+		p_dict = params.dict()
+		qs = self.get_queryset()
+		ret_dict = {}
+		if not qs:
+			ret_dict['message'] = 'Demo id not exist, please request id 1~610'
+			ret_dict['status'] = 'invalid'
+			return JsonResponse(ret_dict)
+		else:
+			userObj = list(qs)[0]
+			#print(userObj.username)
+			if userObj.id >=1 and userObj.id<=610:
+				ret_dict['uid'] = userObj.username
+				ret_dict['pw'] = '9113jimmy'
+				ret_dict['status'] = 'valid'
+			else:
+				ret_dict['message'] = 'Demo id not exist, please request id 1~610'
+				ret_dict['status'] = 'invalid'
+			return JsonResponse(ret_dict)
 
 class MovieSet(viewsets.ReadOnlyModelViewSet):
 	# queryset = Effo.objects.all()
