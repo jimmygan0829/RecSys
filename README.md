@@ -1,4 +1,4 @@
-# Recommendation System Backend
+# Hybrid Movie Recommendation System Backend
 
 ## Set up
 ```
